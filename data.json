@@ -3,6 +3,7 @@
     "semana_actual": 1,
     "anio": 2026,
     "nombre_equipo": "Dream Team",
+    "password_hash": "041c601a4e6feaff366a0b97c9610a2434c93c3bc38c5fcfb12b1d3cdd10c780",
     "premios": [
       { "id": 1, "nombre": "Dulce Grupal", "desc": "Todos le llevan un dulce 🍬", "icono": "🍬" },
       { "id": 2, "nombre": "Frase Motivacional", "desc": "Cada uno le dedica una frase 💬", "icono": "💬" },

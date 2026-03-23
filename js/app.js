@@ -6,7 +6,15 @@
 const App = (() => {
     let currentPlayer = null;
     let currentScreen = 'dashboard';
-    const TEAM_PASSWORD = 'quest2026'; // Contraseña por defecto, cámbiala
+
+    // Hash SHA-256 para comparar contraseñas sin guardar texto plano
+    async function hashPassword(pwd) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(pwd);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
     // ===== INIT =====
     async function init() {
@@ -52,7 +60,7 @@ const App = (() => {
             const cfg = GitHubAPI.getGitHubConfig();
             bar.innerHTML = `<div style="text-align:center;padding:8px;font-size:0.8rem;color:var(--success);border:1px solid var(--success);border-radius:8px;margin-bottom:10px">🟢 Conectado: ${cfg.owner}/${cfg.repo}</div>`;
         } else {
-            bar.innerHTML = `<div style="text-align:center;padding:8px;font-size:0.8rem;color:var(--text-muted);border:1px solid var(--border);border-radius:8px;margin-bottom:10px">🔴 Modo local — <a href="#" onclick="App.showGitHubSetup();return false" style="color:var(--primary)">Conectar GitHub</a></div>`;
+            bar.innerHTML = '';
         }
     }
 
@@ -66,16 +74,17 @@ const App = (() => {
     }
 
     // ===== LOGIN / LOGOUT =====
-    function login() {
+    async function login() {
         const sel = document.getElementById('login-player-select');
         const id = sel.value;
         const pwd = document.getElementById('login-password').value;
 
         if (!pwd) return toast('Ingresa la contraseña del equipo', 'warning');
 
-        // Verificar contraseña (almacenada o por defecto)
-        const storedPwd = localStorage.getItem('quest_team_password') || TEAM_PASSWORD;
-        if (pwd !== storedPwd) return toast('Contraseña incorrecta', 'error');
+        // Verificar contraseña comparando hashes
+        const pwdHash = await hashPassword(pwd);
+        const storedHash = Store.getData().config.password_hash || '041c601a4e6feaff366a0b97c9610a2434c93c3bc38c5fcfb12b1d3cdd10c780';
+        if (pwdHash !== storedHash) return toast('Contraseña incorrecta', 'error');
 
         if (!id) return toast('Selecciona un personaje', 'warning');
         if (id === '__new__') return showAddPlayerModal();
@@ -1242,9 +1251,9 @@ const App = (() => {
 
             <div class="card config-section">
                 <div class="config-section-title">� Contraseña del Equipo</div>
-                <p class="text-muted mb-10" style="font-size:0.85rem">Todos los miembros usan esta contraseña para entrar. Por defecto: <code>quest2026</code></p>
+                <p class="text-muted mb-10" style="font-size:0.85rem">Todos los miembros usan esta contraseña para entrar.</p>
                 <div class="form-row">
-                    <input type="text" id="cfg-password" value="${sanitize(localStorage.getItem('quest_team_password') || TEAM_PASSWORD)}" placeholder="Contraseña del equipo">
+                    <input type="password" id="cfg-password" placeholder="Nueva contraseña">
                     <button class="btn btn-accent btn-sm" onclick="App.guardarPassword()">Guardar</button>
                 </div>
             </div>
@@ -1284,11 +1293,15 @@ const App = (() => {
         `;
     }
 
-    function guardarPassword() {
+    async function guardarPassword() {
         const pwd = document.getElementById('cfg-password').value.trim();
         if (!pwd) return toast('La contraseña no puede estar vacía', 'warning');
-        localStorage.setItem('quest_team_password', pwd);
-        toast('Contraseña actualizada', 'success');
+        const hash = await hashPassword(pwd);
+        const data = Store.getData();
+        data.config.password_hash = hash;
+        Store.saveData(data);
+        document.getElementById('cfg-password').value = '';
+        toast('Contraseña actualizada y sincronizada', 'success');
     }
 
     async function forceSyncGitHub() {

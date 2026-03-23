@@ -220,7 +220,7 @@ const Store = (() => {
         };
         data.jugadores.forEach(j => {
             semana.metas[j.id] = {
-                proyectos: [],
+                tareas: [],
                 casos_meta: 0,
                 casos_cumplidos: 0,
                 avance_general: 0,
@@ -240,7 +240,7 @@ const Store = (() => {
         const sem = data.semanas.find(s => s.numero === semanaNum);
         if (!sem) return;
         if (!sem.metas[jugadorId]) {
-            sem.metas[jugadorId] = { proyectos: [], casos_meta: 0, casos_cumplidos: 0, avance_general: 0, puntos_ganados: 0, cumplida: false };
+            sem.metas[jugadorId] = { tareas: [], casos_meta: 0, casos_cumplidos: 0, avance_general: 0, puntos_ganados: 0, cumplida: false };
         }
         Object.assign(sem.metas[jugadorId], metaData);
         saveData(data);
@@ -291,6 +291,47 @@ const Store = (() => {
             // Badge checks
             checkBadges(jugador, data);
         });
+
+        // Award vote points (3 pts per vote received)
+        const votosResultados = {};
+        data.config.categorias_voto.forEach(cat => {
+            votosResultados[cat.id] = {};
+            data.jugadores.forEach(j => { votosResultados[cat.id][j.id] = 0; });
+        });
+        Object.values(sem.votos).forEach(votosDeJugador => {
+            Object.entries(votosDeJugador).forEach(([catId, votadoId]) => {
+                if (votosResultados[catId] && votosResultados[catId][votadoId] !== undefined) {
+                    votosResultados[catId][votadoId]++;
+                }
+            });
+        });
+        data.jugadores.forEach(j => {
+            const totalVotos = Object.values(votosResultados).reduce((sum, catVotos) => sum + (catVotos[j.id] || 0), 0);
+            const ptsVotos = totalVotos * 3;
+            if (ptsVotos > 0) {
+                j.pts += ptsVotos;
+                j.xp += ptsVotos;
+                j.stats.votos_recibidos = (j.stats.votos_recibidos || 0) + totalVotos;
+                if (sem.metas[j.id]) {
+                    sem.metas[j.id].puntos_ganados = (sem.metas[j.id].puntos_ganados || 0) + ptsVotos;
+                }
+                // Level up check after vote points
+                while (j.xp >= j.nivel * 100) { j.xp -= j.nivel * 100; j.nivel++; }
+                checkBadges(j, data);
+            }
+        });
+
+        // Check for 'popular' badge (most votes)
+        let maxVotos = 0;
+        let popularId = null;
+        data.jugadores.forEach(j => {
+            const total = Object.values(votosResultados).reduce((s, cv) => s + (cv[j.id] || 0), 0);
+            if (total > maxVotos) { maxVotos = total; popularId = j.id; }
+        });
+        if (popularId && maxVotos > 0) {
+            const popular = data.jugadores.find(j => j.id === popularId);
+            if (popular && !popular.badges.includes('popular')) popular.badges.push('popular');
+        }
 
         saveData(data);
         return sem;
@@ -452,10 +493,33 @@ const Store = (() => {
 
     function avanzarSemana() {
         const data = getData();
-        const nueva = data.config.semana_actual + 1;
+        const semActual = data.config.semana_actual;
+        const semObj = data.semanas.find(s => s.numero === semActual);
+        const nueva = semActual + 1;
         data.config.semana_actual = nueva;
         saveData(data);
         crearSemana(nueva);
+
+        // Carry over incomplete tasks (< 100%) to the new week
+        if (semObj) {
+            const freshData = getData();
+            const semNueva = freshData.semanas.find(s => s.numero === nueva);
+            if (semNueva) {
+                freshData.jugadores.forEach(j => {
+                    const metaAnterior = semObj.metas[j.id];
+                    if (metaAnterior && metaAnterior.tareas && metaAnterior.tareas.length > 0) {
+                        const pendientes = metaAnterior.tareas
+                            .filter(t => (t.porcentaje || (t.hecha ? 100 : 0)) < 100)
+                            .map(t => ({ texto: t.texto, porcentaje: t.porcentaje || 0, proyecto_id: t.proyecto_id || '' }));
+                        if (pendientes.length > 0 && semNueva.metas[j.id]) {
+                            semNueva.metas[j.id].tareas = pendientes;
+                        }
+                    }
+                });
+                saveData(freshData);
+            }
+        }
+
         return nueva;
     }
 

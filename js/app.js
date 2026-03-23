@@ -316,7 +316,7 @@ const App = (() => {
 
         const el = document.getElementById('screen-dashboard');
         el.innerHTML = `
-            <div class="screen-title">🏠 Dashboard</div>
+            <div class="screen-title animate-slideDown">🏠 Dashboard</div>
             <div class="week-bar">
                 <div class="week-number">📅 Semana ${config.semana_actual}</div>
                 <div class="week-dates">${semana ? `${semana.fecha_inicio} → ${semana.fecha_fin}` : 'Sin fecha'}</div>
@@ -415,32 +415,35 @@ const App = (() => {
         const j = currentPlayer ? Store.getJugador(currentPlayer.id) : null;
         if (!j) return;
         const meta = semana?.metas[j.id] || { tareas: [], casos_meta: 0 };
-        const tareas = meta.tareas || (meta.proyectos || []).map(p => ({ texto: p, hecha: false, proyecto_id: '' }));
+        const tareas = meta.tareas || [];
 
         el.innerHTML = `
-            <div class="screen-title">🎯 Mis Misiones — Semana ${config.semana_actual}</div>
-            <p class="text-muted mb-20">Define tus metas de la semana. Marca las que vayas completando.</p>
+            <div class="screen-title animate-slideDown">🎯 Mis Misiones — Semana ${config.semana_actual}</div>
+            <p class="text-muted mb-20">Define tus tareas de la semana. El líder asignará el porcentaje de cumplimiento.</p>
 
-            <div class="mission-card mb-20">
+            <div class="mission-card mb-20 animate-fadeIn">
                 <div class="mission-player-header">
                     <span class="mission-player-avatar">${j.avatar}</span>
                     <span class="mission-player-name">${j.nombre}</span>
                     <span class="badge badge-special">Nv.${j.nivel}</span>
                 </div>
 
-                <div class="card-title mt-10">✅ Tareas (checklist)</div>
-                <div id="tareas-checklist">
-                    ${tareas.map((t, i) => `
-                        <div class="mission-item" style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--border)">
-                            <input type="checkbox" id="tarea-check-${i}" ${t.hecha ? 'checked' : ''} onchange="App.toggleTarea(${i})" style="width:20px;height:20px;cursor:pointer">
+                <div class="card-title mt-10">📝 Mis Tareas</div>
+                <div id="tareas-list">
+                    ${tareas.map((t, i) => {
+                        const pct = t.porcentaje || (t.hecha ? 100 : 0);
+                        return `
+                        <div class="mission-item animate-slideIn" style="display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid var(--border);animation-delay:${i * 0.05}s">
+                            <span style="color:var(--accent);font-weight:700;min-width:24px">${i + 1}.</span>
                             <input type="text" id="tarea-text-${i}" value="${sanitize(t.texto)}" placeholder="Describe la tarea..." style="flex:1" ${semana?.verificada ? 'disabled' : ''}>
-                            <select id="tarea-proy-${i}" style="max-width:150px">
+                            <select id="tarea-proy-${i}" style="max-width:150px" ${semana?.verificada ? 'disabled' : ''}>
                                 <option value="">Sin proyecto</option>
                                 ${proyectos.map(p => `<option value="${p.id}" ${t.proyecto_id === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('')}
                             </select>
+                            ${pct > 0 ? `<span class="pct-badge ${pct >= 100 ? 'pct-100' : pct >= 50 ? 'pct-50' : 'pct-low'}">${pct}%</span>` : ''}
                             ${!semana?.verificada ? `<button class="btn btn-ghost btn-sm" onclick="App.removeTarea(${i})" style="color:var(--danger)">✕</button>` : ''}
-                        </div>
-                    `).join('')}
+                        </div>`;
+                    }).join('')}
                 </div>
 
                 ${!semana?.verificada ? `
@@ -457,11 +460,11 @@ const App = (() => {
                 ${!semana?.verificada ? `<button class="btn btn-accent" onclick="App.guardarMeta('${j.id}')">💾 Guardar Mis Metas</button>` : `<div class="text-muted mt-10">✅ Semana verificada — metas bloqueadas</div>`}
             </div>
 
-            <div class="card mt-20">
-                <div class="card-title">👥 Metas del Equipo</div>
+            <div class="card mt-20 animate-fadeIn">
+                <div class="card-title">👥 Tareas del Equipo</div>
                 ${jugadores.filter(jj => jj.id !== j.id).map(jj => {
                     const metaOtro = semana?.metas[jj.id] || { tareas: [], casos_meta: 0 };
-                    const tareasOtro = metaOtro.tareas || (metaOtro.proyectos || []).map(p => ({ texto: p, hecha: false }));
+                    const tareasOtro = metaOtro.tareas || [];
                     return `
                     <div style="padding:12px;border-bottom:1px solid var(--border)">
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -469,9 +472,15 @@ const App = (() => {
                             <strong>${jj.nombre}</strong>
                             <span class="badge badge-special">Nv.${jj.nivel}</span>
                         </div>
-                        ${tareasOtro.length > 0 ? tareasOtro.map(t => `
-                            <div style="margin-left:30px;padding:3px 0;color:${t.hecha ? 'var(--success)' : 'var(--text)'}">${t.hecha ? '☑' : '☐'} ${sanitize(t.texto)}</div>
-                        `).join('') : '<div class="text-muted" style="margin-left:30px">Sin tareas definidas</div>'}
+                        ${tareasOtro.length > 0 ? tareasOtro.map((t, ti) => {
+                            const pctO = t.porcentaje || (t.hecha ? 100 : 0);
+                            return `
+                            <div style="margin-left:30px;padding:4px 0;display:flex;align-items:center;gap:8px">
+                                <span style="color:var(--text-muted);font-size:0.85rem">${ti+1}.</span>
+                                <span style="flex:1">${sanitize(t.texto)}</span>
+                                ${pctO > 0 ? `<span class="pct-badge ${pctO >= 100 ? 'pct-100' : pctO >= 50 ? 'pct-50' : 'pct-low'}" style="font-size:0.75rem">${pctO}%</span>` : ''}
+                            </div>`;
+                        }).join('') : '<div class="text-muted" style="margin-left:30px">Sin tareas definidas</div>'}
                         <div class="text-muted" style="margin-left:30px;font-size:0.8rem">Casos: ${metaOtro.casos_meta || 0}</div>
                     </div>`;
                 }).join('')}
@@ -480,17 +489,19 @@ const App = (() => {
     }
 
     function addTarea() {
+        _saveTareasFromUI();
         const config = Store.getConfig();
         const semana = Store.getSemanaActual();
         if (!semana || !currentPlayer) return;
         const meta = semana.metas[currentPlayer.id] || { tareas: [], casos_meta: 0 };
-        const tareas = meta.tareas || (meta.proyectos || []).map(p => ({ texto: p, hecha: false, proyecto_id: '' }));
-        tareas.push({ texto: '', hecha: false, proyecto_id: '' });
+        const tareas = meta.tareas || [];
+        tareas.push({ texto: '', porcentaje: 0, proyecto_id: '' });
         Store.updateMeta(config.semana_actual, currentPlayer.id, { tareas });
         renderMisiones();
     }
 
     function removeTarea(index) {
+        _saveTareasFromUI();
         const config = Store.getConfig();
         const semana = Store.getSemanaActual();
         if (!semana || !currentPlayer) return;
@@ -501,24 +512,19 @@ const App = (() => {
         renderMisiones();
     }
 
-    function toggleTarea(index) {
-        _saveTareasFromUI();
-    }
-
     function _saveTareasFromUI() {
         if (!currentPlayer) return;
         const config = Store.getConfig();
         const semana = Store.getSemanaActual();
         if (!semana) return;
         const meta = semana.metas[currentPlayer.id] || { tareas: [] };
-        const tareas = meta.tareas || (meta.proyectos || []).map(p => ({ texto: p, hecha: false, proyecto_id: '' }));
+        const tareas = meta.tareas || [];
         const newTareas = tareas.map((t, i) => {
-            const checkEl = document.getElementById(`tarea-check-${i}`);
             const textEl = document.getElementById(`tarea-text-${i}`);
             const proyEl = document.getElementById(`tarea-proy-${i}`);
             return {
                 texto: textEl ? textEl.value : t.texto,
-                hecha: checkEl ? checkEl.checked : t.hecha,
+                porcentaje: t.porcentaje || (t.hecha ? 100 : 0),
                 proyecto_id: proyEl ? proyEl.value : (t.proyecto_id || '')
             };
         });
@@ -534,7 +540,7 @@ const App = (() => {
         const config = Store.getConfig();
         const casosMeta = parseInt(document.getElementById(`meta-casos-${jugadorId}`).value) || 0;
         Store.updateMeta(config.semana_actual, jugadorId, { casos_meta: casosMeta });
-        toast('Metas guardadas', 'success');
+        toast('✅ Metas guardadas', 'success');
     }
 
 
@@ -555,52 +561,61 @@ const App = (() => {
         }
 
         el.innerHTML = `
-            <div class="screen-title">✅ Verificar Cumplimiento — Semana ${config.semana_actual}</div>
-            <p class="text-muted mb-20">Verifica el avance de cada miembro individualmente.</p>
+            <div class="screen-title animate-slideDown">✅ Verificar Cumplimiento — Semana ${config.semana_actual}</div>
+            <p class="text-muted mb-20">Asigna el porcentaje de cumplimiento a cada tarea. Tareas al 100% se completan, las demás pasan a la siguiente semana.</p>
 
             ${semana.verificada ? '<div class="card" style="background:rgba(46,213,115,0.1);border-color:var(--success)"><div class="text-center">✅ Esta semana ya fue verificada</div></div>' : ''}
 
             ${jugadores.map(j => {
                 const meta = semana.metas[j.id] || { tareas: [], casos_meta: 0, casos_cumplidos: 0, avance_general: 0 };
-                const tareas = meta.tareas || (meta.proyectos || []).map(p => ({ texto: p, hecha: false }));
+                const tareas = meta.tareas || [];
                 const tareasTotal = tareas.length;
-                const tareasHechas = tareas.filter(t => t.hecha).length;
-                const pctTareas = tareasTotal > 0 ? Math.round(tareasHechas / tareasTotal * 100) : 0;
+                const avancePromedio = tareasTotal > 0 ? Math.round(tareas.reduce((sum, t) => sum + (t.porcentaje || (t.hecha ? 100 : 0)), 0) / tareasTotal) : (meta.avance_general || 0);
+                const tareasCompletas = tareas.filter(t => (t.porcentaje || (t.hecha ? 100 : 0)) >= 100).length;
+
                 return `
-                <div class="mission-card mb-20">
+                <div class="mission-card mb-20 animate-fadeIn">
                     <div class="mission-player-header">
                         <span class="mission-player-avatar">${j.avatar}</span>
                         <span class="mission-player-name">${j.nombre}</span>
                         ${meta.cumplida ? '<span class="badge badge-gold">✅ Cumplida</span>' : ''}
+                        <span class="badge" style="margin-left:auto">${avancePromedio}% promedio</span>
                     </div>
 
                     <div style="margin-bottom:12px">
-                        <strong>Tareas (${tareasHechas}/${tareasTotal} completadas — ${pctTareas}%):</strong>
+                        <strong>Tareas (${tareasCompletas}/${tareasTotal} al 100%):</strong>
                         ${tareas.length > 0
-                            ? `<div style="margin:8px 0">${tareas.map(t => `
-                                <div style="padding:3px 0;color:${t.hecha ? 'var(--success)' : 'var(--text)'}">
-                                    ${t.hecha ? '☑' : '☐'} ${sanitize(t.texto)}
-                                    ${t.proyecto_id ? `<span class="badge" style="font-size:0.7rem">${(Store.getProyectos().find(p=>p.id===t.proyecto_id)||{}).nombre||''}</span>` : ''}
-                                </div>
-                            `).join('')}</div>`
+                            ? `<div style="margin:8px 0">${tareas.map((t, i) => {
+                                const pct = t.porcentaje || (t.hecha ? 100 : 0);
+                                const barColor = pct >= 100 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+                                return `
+                                <div style="padding:8px;margin-bottom:6px;background:var(--bg-dark);border-radius:8px" class="animate-slideIn">
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                                        <span style="color:var(--accent);font-weight:700;min-width:20px">${i+1}.</span>
+                                        <span style="flex:1;color:${pct >= 100 ? 'var(--success)' : 'var(--text)'}">${sanitize(t.texto) || '<em style="color:var(--text-muted)">Sin descripción</em>'}</span>
+                                        ${t.proyecto_id ? `<span class="badge" style="font-size:0.7rem">${(Store.getProyectos().find(p=>p.id===t.proyecto_id)||{}).nombre||''}</span>` : ''}
+                                        <input type="number" id="tarea-pct-${j.id}-${i}" value="${pct}" min="0" max="100" style="width:70px;text-align:center" ${semana.verificada ? 'disabled' : ''}>
+                                        <span style="color:var(--text-muted);font-size:0.8rem">%</span>
+                                    </div>
+                                    <div class="progress-bar-container" style="height:4px">
+                                        <div class="progress-bar" style="width:${pct}%;background:${barColor}"></div>
+                                    </div>
+                                </div>`;
+                            }).join('')}</div>`
                             : '<div class="text-muted">Sin tareas definidas</div>'
                         }
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>📊 Avance General (%):</label>
-                            <input type="number" id="avance-${j.id}" value="${meta.avance_general}" min="0" max="100" ${semana.verificada ? 'disabled' : ''}>
-                        </div>
-                        <div class="form-group">
                             <label>📋 Casos cumplidos (de ${meta.casos_meta}):</label>
                             <input type="number" id="casos-cumpl-${j.id}" value="${meta.casos_cumplidos}" min="0" max="${meta.casos_meta || 100}" ${semana.verificada ? 'disabled' : ''}>
                         </div>
                     </div>
 
-                    ${!semana.verificada ? `<button class="btn btn-accent btn-sm" onclick="App.guardarAvance('${j.id}')">💾 Guardar Avance de ${j.nombre.split(' ')[0]}</button>` : ''}
+                    ${!semana.verificada ? `<button class="btn btn-accent btn-sm" onclick="App.guardarAvance('${j.id}')">💾 Guardar Avance de ${j.nombre}</button>` : ''}
 
-                    ${meta.puntos_ganados ? `<div class="mt-10" style="font-family:var(--font-title);color:var(--gold)">+${meta.puntos_ganados} pts ganados</div>` : ''}
+                    ${meta.puntos_ganados ? `<div class="mt-10 animate-pulse" style="font-family:var(--font-title);color:var(--gold)">+${meta.puntos_ganados} pts ganados</div>` : ''}
                 </div>`;
             }).join('')}
 
@@ -619,29 +634,57 @@ const App = (() => {
 
     function guardarAvance(jugadorId) {
         const config = Store.getConfig();
-        const avance = parseInt(document.getElementById(`avance-${jugadorId}`).value) || 0;
-        const casosCumpl = parseInt(document.getElementById(`casos-cumpl-${jugadorId}`).value) || 0;
+        const semana = Store.getSemanaActual();
+        if (!semana) return;
+        const meta = semana.metas[jugadorId] || { tareas: [] };
+        const tareas = (meta.tareas || []).map((t, i) => {
+            const pctEl = document.getElementById(`tarea-pct-${jugadorId}-${i}`);
+            return {
+                texto: t.texto,
+                porcentaje: pctEl ? Math.min(100, Math.max(0, parseInt(pctEl.value) || 0)) : (t.porcentaje || 0),
+                proyecto_id: t.proyecto_id || ''
+            };
+        });
+
+        const avanceGeneral = tareas.length > 0
+            ? Math.round(tareas.reduce((sum, t) => sum + (t.porcentaje || 0), 0) / tareas.length)
+            : 0;
+
+        const casosCumpl = parseInt(document.getElementById(`casos-cumpl-${jugadorId}`)?.value) || 0;
+
         Store.updateMeta(config.semana_actual, jugadorId, {
-            avance_general: Math.min(100, Math.max(0, avance)),
+            tareas,
+            avance_general: avanceGeneral,
             casos_cumplidos: casosCumpl
         });
-        toast('Avance guardado', 'success');
+        toast(`✅ Avance de ${Store.getJugador(jugadorId)?.nombre || ''} guardado`, 'success');
     }
 
     function verificarSemana() {
         const config = Store.getConfig();
         const jugadores = Store.getJugadores();
 
-        // Save all avances first
+        // Save all per-task percentages first
         jugadores.forEach(j => {
-            const avanceEl = document.getElementById(`avance-${j.id}`);
+            const semana = Store.getSemanaActual();
+            const meta = semana?.metas[j.id] || { tareas: [] };
+            const tareas = (meta.tareas || []).map((t, i) => {
+                const pctEl = document.getElementById(`tarea-pct-${j.id}-${i}`);
+                return {
+                    texto: t.texto,
+                    porcentaje: pctEl ? Math.min(100, Math.max(0, parseInt(pctEl.value) || 0)) : (t.porcentaje || 0),
+                    proyecto_id: t.proyecto_id || ''
+                };
+            });
+            const avanceGeneral = tareas.length > 0
+                ? Math.round(tareas.reduce((sum, t) => sum + (t.porcentaje || 0), 0) / tareas.length)
+                : 0;
             const casosEl = document.getElementById(`casos-cumpl-${j.id}`);
-            if (avanceEl && casosEl) {
-                Store.updateMeta(config.semana_actual, j.id, {
-                    avance_general: Math.min(100, Math.max(0, parseInt(avanceEl.value) || 0)),
-                    casos_cumplidos: parseInt(casosEl.value) || 0
-                });
-            }
+            Store.updateMeta(config.semana_actual, j.id, {
+                tareas,
+                avance_general: avanceGeneral,
+                casos_cumplidos: casosEl ? parseInt(casosEl.value) || 0 : 0
+            });
         });
 
         Store.verificarSemana(config.semana_actual);
@@ -651,7 +694,7 @@ const App = (() => {
         const heroes = jugadores.filter(j => semana.metas[j.id]?.avance_general >= 100);
         if (heroes.length > 0) {
             launchConfetti();
-            toast(`🎉 ¡${heroes.map(h => h.nombre.split(' ')[0]).join(', ')} completaron al 100%!`, 'success');
+            toast(`🎉 ¡${heroes.map(h => h.nombre).join(', ')} completaron al 100%!`, 'success');
         }
 
         // Award prize to top scorer
@@ -683,7 +726,7 @@ const App = (() => {
         const costos = { ayuda: 15, asignacion: 20, defensa: 25, boost: 30 };
 
         el.innerHTML = `
-            <div class="screen-title">⚡ Poderes Especiales</div>
+            <div class="screen-title animate-slideDown">⚡ Poderes Especiales</div>
             <p class="text-muted mb-20">Activa poderes gastando tus puntos. Solo puedes activar los tuyos.</p>
             <div class="card mb-20" style="text-align:center">
                 <span style="font-size:1.3rem;font-weight:700;color:var(--gold)">💰 Tus puntos: ${j.pts}</span>
@@ -781,19 +824,48 @@ const App = (() => {
         const votosExistentes = semana?.votos[currentPlayer?.id] || {};
         currentVotos = { ...votosExistentes };
 
+        // Get vote results for summary
+        const resultados = Store.getVotosResultados(config.semana_actual);
+        const totalVotos = Object.values(semana?.votos || {}).reduce((sum, v) => sum + Object.keys(v).length, 0);
+
         el.innerHTML = `
-            <div class="screen-title">🗳️ Votaciones Anónimas — Semana ${config.semana_actual}</div>
-            <p class="text-muted mb-20">Vota por tus compañeros en cada categoría. ¡Las votaciones son anónimas!</p>
+            <div class="screen-title animate-slideDown">🗳️ Votaciones — Semana ${config.semana_actual}</div>
+            <p class="text-muted mb-20">Vota por tus compañeros en cada categoría. Cada voto recibido suma <strong style="color:var(--gold)">3 pts</strong> al verificar. ¡Son anónimas!</p>
+
+            ${totalVotos > 0 ? `
+                <div class="card mb-20 animate-fadeIn" style="border-color:var(--gold)">
+                    <div class="card-title" style="color:var(--gold)">🏅 Resumen de Votos (${totalVotos} votos emitidos)</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px">
+                        ${config.categorias_voto.map(cat => {
+                            const votos = resultados[cat.id] || {};
+                            const sorted = Object.entries(votos).sort((a, b) => b[1] - a[1]);
+                            const ganador = sorted[0];
+                            const ganadorJ = ganador && ganador[1] > 0 ? Store.getJugador(ganador[0]) : null;
+                            return ganadorJ ? `
+                                <div class="badge badge-gold animate-pop" style="padding:8px 14px;font-size:0.85rem">
+                                    ${cat.icono} ${ganadorJ.avatar} ${ganadorJ.nombre} (${ganador[1]})
+                                </div>` : '';
+                        }).join('')}
+                    </div>
+                    <div class="mt-10" style="font-size:0.85rem;color:var(--text-muted)">
+                        <strong>Puntos estimados:</strong>
+                        ${jugadores.map(j => {
+                            const totalJ = Object.values(resultados).reduce((s, cv) => s + (cv[j.id] || 0), 0);
+                            return totalJ > 0 ? `<span style="margin-right:12px">${j.avatar} +${totalJ * 3}pts</span>` : '';
+                        }).join('')}
+                    </div>
+                </div>
+            ` : ''}
 
             ${config.categorias_voto.map(cat => `
-                <div class="vote-category">
+                <div class="vote-category animate-fadeIn">
                     <div class="vote-category-title">${cat.icono} ${cat.nombre} <span class="badge badge-special">${cat.tipo}</span></div>
                     <div class="vote-options">
                         ${jugadores.filter(j => j.id !== currentPlayer?.id).map(j => `
                             <div class="vote-option ${currentVotos[cat.id] === j.id ? 'selected' : ''}"
                                  onclick="App.selectVoto(${cat.id}, '${j.id}', this)">
                                 <span style="font-size:1.3rem">${j.avatar}</span>
-                                <span>${j.nombre.split(' ')[0]}</span>
+                                <span>${j.nombre}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -802,10 +874,10 @@ const App = (() => {
 
             <div class="text-center mt-20" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
                 <button class="btn btn-primary btn-lg" onclick="App.submitVotos()">🗳️ Enviar Votos</button>
-                <button class="btn btn-secondary" onclick="App.verResultadosVotos()">📊 Ver Resultados</button>
+                <button class="btn btn-secondary" onclick="App.verResultadosVotos()">📊 Ver Resultados Detallados</button>
             </div>
 
-            <div class="card mt-20">
+            <div class="card mt-20 animate-fadeIn">
                 <div class="card-title">💬 Enviar Mención Positiva Anónima</div>
                 <div class="form-group">
                     <label>¿Para quién?</label>
@@ -836,36 +908,63 @@ const App = (() => {
         Object.entries(currentVotos).forEach(([catId, votadoId]) => {
             Store.submitVoto(config.semana_actual, currentPlayer.id, parseInt(catId), votadoId);
         });
-        toast('¡Votos enviados! Son anónimos 🤫', 'success');
+        launchConfetti();
+        toast('🗳️ ¡Votos enviados! Son anónimos y suman +3 pts por voto al verificar 🤫', 'success');
+        renderVotos();
     }
 
     function verResultadosVotos() {
         const config = Store.getConfig();
         const resultados = Store.getVotosResultados(config.semana_actual);
         const jugadores = Store.getJugadores();
+        const maxPossible = jugadores.length - 1;
 
         let html = '<div class="modal-title">📊 Resultados de Votación — Semana ' + config.semana_actual + '</div>';
+        html += '<p class="text-muted mb-20">Cada voto recibido = <strong style="color:var(--gold)">+3 pts</strong> al verificar la semana.</p>';
+
         config.categorias_voto.forEach(cat => {
             const votos = resultados[cat.id] || {};
             const sorted = Object.entries(votos).sort((a, b) => b[1] - a[1]);
             const ganador = sorted[0];
-            const ganadorJ = ganador ? Store.getJugador(ganador[0]) : null;
+            const ganadorJ = ganador && ganador[1] > 0 ? Store.getJugador(ganador[0]) : null;
 
             html += `
-                <div style="margin-bottom:16px;padding:12px;background:var(--bg-dark);border-radius:10px">
-                    <div style="font-weight:700;margin-bottom:8px">${cat.icono} ${cat.nombre}</div>
+                <div style="margin-bottom:16px;padding:16px;background:var(--bg-dark);border-radius:12px;border:1px solid var(--border)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                        <span style="font-weight:700;font-size:1rem">${cat.icono} ${cat.nombre}</span>
+                        ${ganadorJ ? `<span class="badge badge-gold">${ganadorJ.avatar} ${ganadorJ.nombre}</span>` : '<span class="text-muted">Sin votos</span>'}
+                    </div>
                     ${sorted.map(([jId, count]) => {
                         const j = Store.getJugador(jId);
                         if (!j) return '';
-                        return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
-                            <span>${j.avatar}</span>
-                            <span style="flex:1">${j.nombre.split(' ')[0]}</span>
-                            <span style="font-weight:700;color:var(--gold)">${count} votos</span>
+                        const barWidth = maxPossible > 0 ? (count / maxPossible) * 100 : 0;
+                        return `<div style="display:flex;align-items:center;gap:10px;margin:6px 0">
+                            <span style="min-width:30px">${j.avatar}</span>
+                            <span style="min-width:70px;font-size:0.9rem">${j.nombre}</span>
+                            <div class="vote-result-bar">
+                                <div class="vote-result-bar-fill" style="width:${barWidth}%"></div>
+                            </div>
+                            <span style="font-weight:700;color:var(--gold);min-width:30px;text-align:right">${count}</span>
                         </div>`;
                     }).join('')}
                 </div>`;
         });
-        showModal(html + '<button class="btn btn-primary mt-10" onclick="App.closeModal()">Cerrar</button>');
+
+        // Total votes received summary
+        html += `
+            <div style="margin-top:16px;padding:16px;background:var(--bg-dark);border-radius:12px;border:2px solid var(--gold)">
+                <div style="font-weight:700;margin-bottom:10px;color:var(--gold)">⭐ Total Votos Recibidos → Puntos al verificar</div>
+                ${jugadores.map(j => {
+                    const totalVotosRecibidos = Object.values(resultados).reduce((sum, catVotos) => sum + (catVotos[j.id] || 0), 0);
+                    return `<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+                        <span>${j.avatar}</span>
+                        <span style="flex:1">${j.nombre}</span>
+                        <span style="font-weight:700;color:var(--gold)">${totalVotosRecibidos} votos → +${totalVotosRecibidos * 3} pts</span>
+                    </div>`;
+                }).join('')}
+            </div>`;
+
+        showModal(html + '<button class="btn btn-primary mt-20" onclick="App.closeModal()">Cerrar</button>');
     }
 
     function enviarMencion() {
@@ -884,7 +983,7 @@ const App = (() => {
     function renderRankings() {
         const el = document.getElementById('screen-rankings');
         el.innerHTML = `
-            <div class="screen-title">🏆 Rankings</div>
+            <div class="screen-title animate-slideDown">🏆 Rankings</div>
             <div class="tabs">
                 <button class="tab ${rankingTab === 'semanal' ? 'active' : ''}" onclick="App.changeRankingTab('semanal')">Semanal</button>
                 <button class="tab ${rankingTab === 'mensual' ? 'active' : ''}" onclick="App.changeRankingTab('mensual')">Mensual</button>
@@ -961,7 +1060,7 @@ const App = (() => {
         const el = document.getElementById('screen-proyectos');
 
         el.innerHTML = `
-            <div class="screen-title">📊 Seguimiento de Proyectos</div>
+            <div class="screen-title animate-slideDown">📊 Seguimiento de Proyectos</div>
             <button class="btn btn-primary mb-20" onclick="App.mostrarFormProyecto()">➕ Nuevo Proyecto</button>
 
             ${proyectos.length === 0 ? `
@@ -1187,7 +1286,7 @@ const App = (() => {
         const el = document.getElementById('screen-perfil');
 
         el.innerHTML = `
-            <div class="screen-title">👤 Perfil de Jugador</div>
+            <div class="screen-title animate-slideDown">👤 Perfil de Jugador</div>
             <div class="card">
                 <div class="profile-card">
                     <div class="profile-avatar" style="border-color:${j.color}">${j.avatar}</div>
@@ -1301,7 +1400,7 @@ const App = (() => {
         const el = document.getElementById('screen-config');
 
         el.innerHTML = `
-            <div class="screen-title">⚙️ Configuración</div>
+            <div class="screen-title animate-slideDown">⚙️ Configuración</div>
 
             <div class="card config-section">
                 <div class="config-section-title">🏰 Equipo</div>
@@ -1706,7 +1805,7 @@ const App = (() => {
     return {
         login, logout, showScreen, showAddPlayerModal, pickAvatar, addNewPlayer,
         guardarMeta, guardarAvance, verificarSemana, nuevaSemana,
-        addTarea, removeTarea, toggleTarea,
+        addTarea, removeTarea,
         usarPoder,
         selectVoto, submitVotos, verResultadosVotos, enviarMencion,
         changeRankingTab,

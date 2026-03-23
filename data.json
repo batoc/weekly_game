@@ -1,0 +1,57 @@
+{
+  "config": {
+    "semana_actual": 1,
+    "anio": 2026,
+    "nombre_equipo": "Dream Team",
+    "premios": [
+      { "id": 1, "nombre": "Dulce Grupal", "desc": "Todos le llevan un dulce 🍬", "icono": "🍬" },
+      { "id": 2, "nombre": "Frase Motivacional", "desc": "Cada uno le dedica una frase 💬", "icono": "💬" },
+      { "id": 3, "nombre": "Corona Semanal", "desc": "Porta la corona toda la semana 👑", "icono": "👑" },
+      { "id": 4, "nombre": "Café Gratis", "desc": "Un café invitado por el equipo ☕", "icono": "☕" },
+      { "id": 5, "nombre": "Meme Dedicado", "desc": "Le hacen un meme gracioso 😂", "icono": "😂" }
+    ],
+    "categorias_voto": [
+      { "id": 1, "nombre": "Mejor Compañero", "icono": "🤝", "tipo": "positivo" },
+      { "id": 2, "nombre": "Líder Natural", "icono": "🦁", "tipo": "positivo" },
+      { "id": 3, "nombre": "Más Divertido", "icono": "😄", "tipo": "positivo" },
+      { "id": 4, "nombre": "Más Ordenado", "icono": "📋", "tipo": "positivo" },
+      { "id": 5, "nombre": "Mejor Comunicador", "icono": "🗣️", "tipo": "positivo" },
+      { "id": 6, "nombre": "Más Afectuoso", "icono": "💖", "tipo": "positivo" },
+      { "id": 7, "nombre": "Segundo al Mando", "icono": "🥈", "tipo": "positivo" },
+      { "id": 8, "nombre": "Más Regañón", "icono": "😤", "tipo": "divertido" }
+    ],
+    "poderes": [
+      { "id": 1, "nombre": "Pedir Refuerzo", "desc": "Un compañero aleatorio te ayuda esta semana", "icono": "🤝", "tipo": "ayuda" },
+      { "id": 2, "nombre": "Dividir y Conquistar", "desc": "Divide una tarea con otro compañero", "icono": "⚔️", "tipo": "ayuda" },
+      { "id": 3, "nombre": "Transferir Caso", "desc": "Transfiere un caso retrasado a un voluntario", "icono": "📦", "tipo": "asignacion" },
+      { "id": 4, "nombre": "Consultoría Express", "desc": "30 min de acompañamiento para decidir", "icono": "🧠", "tipo": "ayuda" },
+      { "id": 5, "nombre": "Escudo Protector", "desc": "No pierde puntos esta semana si no cumple", "icono": "🛡️", "tipo": "defensa" },
+      { "id": 6, "nombre": "Doble XP", "desc": "Puntos dobles por las metas cumplidas", "icono": "⚡", "tipo": "boost" }
+    ],
+    "badges_definiciones": [
+      { "id": "primer_logro", "nombre": "Primer Logro", "icono": "🌟", "desc": "Completó su primera meta al 100%", "condicion": "primera_meta_100" },
+      { "id": "racha_3", "nombre": "Racha Imparable", "icono": "🔥", "desc": "3 semanas consecutivas al 100%", "condicion": "racha_3" },
+      { "id": "cazador_10", "nombre": "Cazador de Casos", "icono": "🎯", "desc": "10 casos resueltos", "condicion": "casos_10" },
+      { "id": "cazador_50", "nombre": "Maestro de Casos", "icono": "💎", "desc": "50 casos resueltos", "condicion": "casos_50" },
+      { "id": "equipo", "nombre": "Trabajo en Equipo", "icono": "🤝", "desc": "Usó un poder de ayuda", "condicion": "uso_poder" },
+      { "id": "proyecto_done", "nombre": "Proyecto Terminado", "icono": "🏁", "desc": "Completó un proyecto", "condicion": "proyecto_completado" },
+      { "id": "emp_mes", "nombre": "Empleado del Mes", "icono": "🏆", "desc": "Más puntos en el mes", "condicion": "empleado_mes" },
+      { "id": "popular", "nombre": "Favorito del Equipo", "icono": "❤️", "desc": "Más votos positivos en una semana", "condicion": "mas_votos" },
+      { "id": "nivel_5", "nombre": "Veterano", "icono": "⭐", "desc": "Alcanzó nivel 5", "condicion": "nivel_5" },
+      { "id": "nivel_10", "nombre": "Leyenda", "icono": "👑", "desc": "Alcanzó nivel 10", "condicion": "nivel_10" }
+    ]
+  },
+  "jugadores": [
+    { "id": "ana", "nombre": "Ana María Rubiano", "avatar": "🦸‍♀️", "color": "#ff6b35", "pts": 0, "nivel": 1, "xp": 0, "badges": [], "stats": { "proyectos_completados": 0, "casos_resueltos": 0, "semanas_100": 0, "racha_actual": 0, "poderes_usados": 0, "votos_recibidos": 0 }},
+    { "id": "magda", "nombre": "Magda Medina", "avatar": "🧙‍♂️", "color": "#7b2ff7", "pts": 0, "nivel": 1, "xp": 0, "badges": [], "stats": { "proyectos_completados": 0, "casos_resueltos": 0, "semanas_100": 0, "racha_actual": 0, "poderes_usados": 0, "votos_recibidos": 0 }},
+    { "id": "monica", "nombre": "Monica Muñoz", "avatar": "🦹‍♀️", "color": "#00d4aa", "pts": 0, "nivel": 1, "xp": 0, "badges": [], "stats": { "proyectos_completados": 0, "casos_resueltos": 0, "semanas_100": 0, "racha_actual": 0, "poderes_usados": 0, "votos_recibidos": 0 }},
+    { "id": "jugador4", "nombre": "Jugador 4", "avatar": "🧝‍♂️", "color": "#ffd700", "pts": 0, "nivel": 1, "xp": 0, "badges": [], "stats": { "proyectos_completados": 0, "casos_resueltos": 0, "semanas_100": 0, "racha_actual": 0, "poderes_usados": 0, "votos_recibidos": 0 }},
+    { "id": "jugador5", "nombre": "Jugador 5", "avatar": "🤖", "color": "#ff4757", "pts": 0, "nivel": 1, "xp": 0, "badges": [], "stats": { "proyectos_completados": 0, "casos_resueltos": 0, "semanas_100": 0, "racha_actual": 0, "poderes_usados": 0, "votos_recibidos": 0 }},
+    { "id": "jugador6", "nombre": "Jugador 6", "avatar": "🦊", "color": "#1e90ff", "pts": 0, "nivel": 1, "xp": 0, "badges": [], "stats": { "proyectos_completados": 0, "casos_resueltos": 0, "semanas_100": 0, "racha_actual": 0, "poderes_usados": 0, "votos_recibidos": 0 }}
+  ],
+  "semanas": [],
+  "proyectos": [],
+  "menciones": [],
+  "historial_poderes": [],
+  "historial_premios": []
+}

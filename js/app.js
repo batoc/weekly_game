@@ -16,6 +16,13 @@ const App = (() => {
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
+    // ===== ROLE HELPERS =====
+    function isLeader() {
+        if (!currentPlayer) return false;
+        const config = Store.getConfig();
+        return currentPlayer.id === (config.leader_id || 'ana');
+    }
+
     // ===== INIT =====
     async function init() {
         updateGitHubStatusBar();
@@ -240,6 +247,17 @@ const App = (() => {
         toast(`¡${name} se unió al equipo!`, 'success');
     }
 
+    function updateSidebarNav() {
+        // Hide config and verificar for non-leaders
+        const leader = isLeader();
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            const screen = btn.getAttribute('data-screen');
+            if (screen === 'config' || screen === 'verificar') {
+                btn.style.display = leader ? '' : 'none';
+            }
+        });
+    }
+
     function updateSidebarInfo() {
         if (!currentPlayer) return;
         const j = Store.getJugador(currentPlayer.id);
@@ -254,6 +272,12 @@ const App = (() => {
 
     // ===== NAVIGATION =====
     function showScreen(screenId) {
+        if (screenId === 'config' && currentPlayer && !isLeader()) {
+            return toast('Solo el líder puede acceder a Configuración', 'warning');
+        }
+        if (screenId === 'verificar' && currentPlayer && !isLeader()) {
+            return toast('Solo el líder puede verificar cumplimiento', 'warning');
+        }
         if (screenId === 'config' && !currentPlayer) {
             // Allow config from login
         }
@@ -386,55 +410,140 @@ const App = (() => {
         const config = Store.getConfig();
         const jugadores = Store.getJugadores();
         const semana = Store.getSemanaActual();
+        const proyectos = Store.getProyectos().filter(p => p.estado === 'activo');
         const el = document.getElementById('screen-misiones');
+        const j = currentPlayer ? Store.getJugador(currentPlayer.id) : null;
+        if (!j) return;
+        const meta = semana?.metas[j.id] || { tareas: [], casos_meta: 0 };
+        const tareas = meta.tareas || (meta.proyectos || []).map(p => ({ texto: p, hecha: false, proyecto_id: '' }));
 
         el.innerHTML = `
-            <div class="screen-title">🎯 Misiones Semanales — Semana ${config.semana_actual}</div>
-            <p class="text-muted mb-20">Cada miembro define sus metas de la semana: proyectos a avanzar y casos a resolver.</p>
+            <div class="screen-title">🎯 Mis Misiones — Semana ${config.semana_actual}</div>
+            <p class="text-muted mb-20">Define tus metas de la semana. Marca las que vayas completando.</p>
 
-            <div id="misiones-list">
-                ${jugadores.map(j => {
-                    const meta = semana?.metas[j.id] || { proyectos: [], casos_meta: 0 };
+            <div class="mission-card mb-20">
+                <div class="mission-player-header">
+                    <span class="mission-player-avatar">${j.avatar}</span>
+                    <span class="mission-player-name">${j.nombre}</span>
+                    <span class="badge badge-special">Nv.${j.nivel}</span>
+                </div>
+
+                <div class="card-title mt-10">✅ Tareas (checklist)</div>
+                <div id="tareas-checklist">
+                    ${tareas.map((t, i) => `
+                        <div class="mission-item" style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid var(--border)">
+                            <input type="checkbox" id="tarea-check-${i}" ${t.hecha ? 'checked' : ''} onchange="App.toggleTarea(${i})" style="width:20px;height:20px;cursor:pointer">
+                            <input type="text" id="tarea-text-${i}" value="${sanitize(t.texto)}" placeholder="Describe la tarea..." style="flex:1" ${semana?.verificada ? 'disabled' : ''}>
+                            <select id="tarea-proy-${i}" style="max-width:150px">
+                                <option value="">Sin proyecto</option>
+                                ${proyectos.map(p => `<option value="${p.id}" ${t.proyecto_id === p.id ? 'selected' : ''}>${p.nombre}</option>`).join('')}
+                            </select>
+                            ${!semana?.verificada ? `<button class="btn btn-ghost btn-sm" onclick="App.removeTarea(${i})" style="color:var(--danger)">✕</button>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+
+                ${!semana?.verificada ? `
+                    <button class="btn btn-ghost btn-sm mt-10" onclick="App.addTarea()">➕ Agregar Tarea</button>
+                ` : ''}
+
+                <div class="form-row mt-20">
+                    <div class="form-group">
+                        <label>📋 Meta de casos a resolver:</label>
+                        <input type="number" id="meta-casos-${j.id}" value="${meta.casos_meta || 0}" min="0" max="100" ${semana?.verificada ? 'disabled' : ''}>
+                    </div>
+                </div>
+
+                ${!semana?.verificada ? `<button class="btn btn-accent" onclick="App.guardarMeta('${j.id}')">💾 Guardar Mis Metas</button>` : `<div class="text-muted mt-10">✅ Semana verificada — metas bloqueadas</div>`}
+            </div>
+
+            <div class="card mt-20">
+                <div class="card-title">👥 Metas del Equipo</div>
+                ${jugadores.filter(jj => jj.id !== j.id).map(jj => {
+                    const metaOtro = semana?.metas[jj.id] || { tareas: [], casos_meta: 0 };
+                    const tareasOtro = metaOtro.tareas || (metaOtro.proyectos || []).map(p => ({ texto: p, hecha: false }));
                     return `
-                    <div class="mission-card mb-20">
-                        <div class="mission-player-header">
-                            <span class="mission-player-avatar">${j.avatar}</span>
-                            <span class="mission-player-name">${j.nombre}</span>
-                            <span class="badge badge-special">Nv.${j.nivel}</span>
+                    <div style="padding:12px;border-bottom:1px solid var(--border)">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                            <span>${jj.avatar}</span>
+                            <strong>${jj.nombre}</strong>
+                            <span class="badge badge-special">Nv.${jj.nivel}</span>
                         </div>
-                        <div class="form-group">
-                            <label>🎯 Metas de Proyecto (una por línea):</label>
-                            <textarea id="meta-proy-${j.id}" placeholder="Ej: Terminar módulo de reportes&#10;Revisar diseño de base de datos">${sanitize((meta.proyectos || []).join('\n'))}</textarea>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>📋 Meta de casos a resolver:</label>
-                                <input type="number" id="meta-casos-${j.id}" value="${meta.casos_meta || 0}" min="0" max="100">
-                            </div>
-                        </div>
-                        <button class="btn btn-accent btn-sm" onclick="App.guardarMeta('${j.id}')">💾 Guardar Meta</button>
+                        ${tareasOtro.length > 0 ? tareasOtro.map(t => `
+                            <div style="margin-left:30px;padding:3px 0;color:${t.hecha ? 'var(--success)' : 'var(--text)'}">${t.hecha ? '☑' : '☐'} ${sanitize(t.texto)}</div>
+                        `).join('') : '<div class="text-muted" style="margin-left:30px">Sin tareas definidas</div>'}
+                        <div class="text-muted" style="margin-left:30px;font-size:0.8rem">Casos: ${metaOtro.casos_meta || 0}</div>
                     </div>`;
                 }).join('')}
             </div>
         `;
     }
 
-    function guardarMeta(jugadorId) {
+    function addTarea() {
         const config = Store.getConfig();
-        const proyText = document.getElementById(`meta-proy-${jugadorId}`).value;
-        const casosMeta = parseInt(document.getElementById(`meta-casos-${jugadorId}`).value) || 0;
-        const proyectos = proyText.split('\n').map(p => p.trim()).filter(p => p.length > 0);
-
-        Store.updateMeta(config.semana_actual, jugadorId, {
-            proyectos,
-            casos_meta: casosMeta
-        });
-        const j = Store.getJugador(jugadorId);
-        toast(`Meta guardada para ${j.nombre}`, 'success');
+        const semana = Store.getSemanaActual();
+        if (!semana || !currentPlayer) return;
+        const meta = semana.metas[currentPlayer.id] || { tareas: [], casos_meta: 0 };
+        const tareas = meta.tareas || (meta.proyectos || []).map(p => ({ texto: p, hecha: false, proyecto_id: '' }));
+        tareas.push({ texto: '', hecha: false, proyecto_id: '' });
+        Store.updateMeta(config.semana_actual, currentPlayer.id, { tareas });
+        renderMisiones();
     }
+
+    function removeTarea(index) {
+        const config = Store.getConfig();
+        const semana = Store.getSemanaActual();
+        if (!semana || !currentPlayer) return;
+        const meta = semana.metas[currentPlayer.id] || { tareas: [] };
+        const tareas = meta.tareas || [];
+        tareas.splice(index, 1);
+        Store.updateMeta(config.semana_actual, currentPlayer.id, { tareas });
+        renderMisiones();
+    }
+
+    function toggleTarea(index) {
+        _saveTareasFromUI();
+    }
+
+    function _saveTareasFromUI() {
+        if (!currentPlayer) return;
+        const config = Store.getConfig();
+        const semana = Store.getSemanaActual();
+        if (!semana) return;
+        const meta = semana.metas[currentPlayer.id] || { tareas: [] };
+        const tareas = meta.tareas || (meta.proyectos || []).map(p => ({ texto: p, hecha: false, proyecto_id: '' }));
+        const newTareas = tareas.map((t, i) => {
+            const checkEl = document.getElementById(`tarea-check-${i}`);
+            const textEl = document.getElementById(`tarea-text-${i}`);
+            const proyEl = document.getElementById(`tarea-proy-${i}`);
+            return {
+                texto: textEl ? textEl.value : t.texto,
+                hecha: checkEl ? checkEl.checked : t.hecha,
+                proyecto_id: proyEl ? proyEl.value : (t.proyecto_id || '')
+            };
+        });
+        Store.updateMeta(config.semana_actual, currentPlayer.id, { tareas: newTareas });
+    }
+
+
+    function guardarMeta(jugadorId) {
+        if (currentPlayer && jugadorId !== currentPlayer.id) {
+            return toast('Solo puedes editar tus propias metas', 'warning');
+        }
+        _saveTareasFromUI();
+        const config = Store.getConfig();
+        const casosMeta = parseInt(document.getElementById(`meta-casos-${jugadorId}`).value) || 0;
+        Store.updateMeta(config.semana_actual, jugadorId, { casos_meta: casosMeta });
+        toast('Metas guardadas', 'success');
+    }
+
 
     // ===== VERIFICAR CUMPLIMIENTO =====
     function renderVerificar() {
+        if (!isLeader()) {
+            document.getElementById('screen-verificar').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔒</div><div>Solo el líder puede verificar</div></div>';
+            return;
+        }
         const config = Store.getConfig();
         const jugadores = Store.getJugadores();
         const semana = Store.getSemanaActual();
@@ -447,12 +556,16 @@ const App = (() => {
 
         el.innerHTML = `
             <div class="screen-title">✅ Verificar Cumplimiento — Semana ${config.semana_actual}</div>
-            <p class="text-muted mb-20">El líder verifica el avance de cada miembro y asigna puntajes.</p>
+            <p class="text-muted mb-20">Verifica el avance de cada miembro individualmente.</p>
 
             ${semana.verificada ? '<div class="card" style="background:rgba(46,213,115,0.1);border-color:var(--success)"><div class="text-center">✅ Esta semana ya fue verificada</div></div>' : ''}
 
             ${jugadores.map(j => {
-                const meta = semana.metas[j.id] || { proyectos: [], casos_meta: 0, casos_cumplidos: 0, avance_general: 0 };
+                const meta = semana.metas[j.id] || { tareas: [], casos_meta: 0, casos_cumplidos: 0, avance_general: 0 };
+                const tareas = meta.tareas || (meta.proyectos || []).map(p => ({ texto: p, hecha: false }));
+                const tareasTotal = tareas.length;
+                const tareasHechas = tareas.filter(t => t.hecha).length;
+                const pctTareas = tareasTotal > 0 ? Math.round(tareasHechas / tareasTotal * 100) : 0;
                 return `
                 <div class="mission-card mb-20">
                     <div class="mission-player-header">
@@ -462,10 +575,15 @@ const App = (() => {
                     </div>
 
                     <div style="margin-bottom:12px">
-                        <strong>Metas de proyecto:</strong>
-                        ${(meta.proyectos || []).length > 0
-                            ? `<ul style="margin:8px 0;padding-left:20px">${meta.proyectos.map(p => `<li>${sanitize(p)}</li>`).join('')}</ul>`
-                            : '<div class="text-muted">Sin metas definidas</div>'
+                        <strong>Tareas (${tareasHechas}/${tareasTotal} completadas — ${pctTareas}%):</strong>
+                        ${tareas.length > 0
+                            ? `<div style="margin:8px 0">${tareas.map(t => `
+                                <div style="padding:3px 0;color:${t.hecha ? 'var(--success)' : 'var(--text)'}">
+                                    ${t.hecha ? '☑' : '☐'} ${sanitize(t.texto)}
+                                    ${t.proyecto_id ? `<span class="badge" style="font-size:0.7rem">${(Store.getProyectos().find(p=>p.id===t.proyecto_id)||{}).nombre||''}</span>` : ''}
+                                </div>
+                            `).join('')}</div>`
+                            : '<div class="text-muted">Sin tareas definidas</div>'
                         }
                     </div>
 
@@ -480,7 +598,7 @@ const App = (() => {
                         </div>
                     </div>
 
-                    ${!semana.verificada ? `<button class="btn btn-accent btn-sm" onclick="App.guardarAvance('${j.id}')">💾 Guardar Avance</button>` : ''}
+                    ${!semana.verificada ? `<button class="btn btn-accent btn-sm" onclick="App.guardarAvance('${j.id}')">💾 Guardar Avance de ${j.nombre.split(' ')[0]}</button>` : ''}
 
                     ${meta.puntos_ganados ? `<div class="mt-10" style="font-family:var(--font-title);color:var(--gold)">+${meta.puntos_ganados} pts ganados</div>` : ''}
                 </div>`;
@@ -497,6 +615,7 @@ const App = (() => {
             `}
         `;
     }
+
 
     function guardarAvance(jugadorId) {
         const config = Store.getConfig();
@@ -556,20 +675,32 @@ const App = (() => {
     function renderPoderes() {
         const config = Store.getConfig();
         const semana = Store.getSemanaActual();
+        const j = currentPlayer ? Store.getJugador(currentPlayer.id) : null;
         const el = document.getElementById('screen-poderes');
+        if (!j) return;
+
+        // Power costs based on type
+        const costos = { ayuda: 15, asignacion: 20, defensa: 25, boost: 30 };
 
         el.innerHTML = `
             <div class="screen-title">⚡ Poderes Especiales</div>
-            <p class="text-muted mb-20">Activa un poder y el juego asignará ayuda aleatoriamente.</p>
+            <p class="text-muted mb-20">Activa poderes gastando tus puntos. Solo puedes activar los tuyos.</p>
+            <div class="card mb-20" style="text-align:center">
+                <span style="font-size:1.3rem;font-weight:700;color:var(--gold)">💰 Tus puntos: ${j.pts}</span>
+            </div>
 
             <div class="card-grid">
-                ${config.poderes.map(p => `
-                    <div class="power-card" onclick="App.usarPoder(${p.id})">
+                ${config.poderes.map(p => {
+                    const costo = costos[p.tipo] || 15;
+                    const puedeComprar = j.pts >= costo;
+                    return `
+                    <div class="power-card ${!puedeComprar ? 'disabled' : ''}" onclick="${puedeComprar ? `App.usarPoder(${p.id})` : ''}" style="${!puedeComprar ? 'opacity:0.5;cursor:not-allowed' : ''}">
                         <div class="power-icon">${p.icono}</div>
                         <div class="power-name">${p.nombre}</div>
                         <div class="power-desc">${p.desc}</div>
-                    </div>
-                `).join('')}
+                        <div style="margin-top:8px;font-weight:700;color:${puedeComprar ? 'var(--gold)' : 'var(--danger)'}">💰 ${costo} pts</div>
+                    </div>`;
+                }).join('')}
             </div>
 
             <div class="card mt-20">
@@ -606,6 +737,17 @@ const App = (() => {
         if (!currentPlayer) return;
         const config = Store.getConfig();
         const poder = config.poderes.find(p => p.id === poderId);
+        const costos = { ayuda: 15, asignacion: 20, defensa: 25, boost: 30 };
+        const costo = costos[poder.tipo] || 15;
+        const j = Store.getJugador(currentPlayer.id);
+
+        if (j.pts < costo) {
+            return toast(`Necesitas ${costo} pts para usar ${poder.nombre}. Tienes ${j.pts}.`, 'warning');
+        }
+
+        // Deduct points
+        Store.updateJugador(currentPlayer.id, { pts: j.pts - costo });
+
         const result = Store.activarPoder(config.semana_actual, poderId, currentPlayer.id);
         const helper = Store.getJugador(result.helper_id);
 
@@ -613,6 +755,7 @@ const App = (() => {
             <div class="power-reveal">
                 <div class="power-reveal-icon">${poder.icono}</div>
                 <div class="power-reveal-text">¡${poder.nombre} Activado!</div>
+                <div style="margin-top:10px;color:var(--danger);font-size:0.9rem">-${costo} pts</div>
                 ${helper ? `
                     <div style="margin-top:20px;font-size:1rem;color:var(--text-muted)">Tu compañero asignado es:</div>
                     <div class="power-reveal-target">${helper.avatar} ${helper.nombre}</div>
@@ -621,8 +764,10 @@ const App = (() => {
             </div>
         `);
         launchConfetti();
+        currentPlayer = Store.getJugador(currentPlayer.id);
         renderPoderes();
     }
+
 
     // ===== VOTOS =====
     let currentVotos = {};
@@ -665,7 +810,7 @@ const App = (() => {
                 <div class="form-group">
                     <label>¿Para quién?</label>
                     <select id="mencion-para">
-                        ${jugadores.map(j => `<option value="${j.id}">${j.avatar} ${j.nombre}</option>`).join('')}
+                        ${jugadores.filter(j => j.id !== currentPlayer?.id).map(j => `<option value="${j.id}">${j.avatar} ${j.nombre}</option>`).join('')}
                     </select>
                 </div>
                 <div class="form-group">
@@ -676,6 +821,7 @@ const App = (() => {
             </div>
         `;
     }
+
 
     function selectVoto(categoriaId, jugadorId, el) {
         currentVotos[categoriaId] = jugadorId;
@@ -1560,6 +1706,7 @@ const App = (() => {
     return {
         login, logout, showScreen, showAddPlayerModal, pickAvatar, addNewPlayer,
         guardarMeta, guardarAvance, verificarSemana, nuevaSemana,
+        addTarea, removeTarea, toggleTarea,
         usarPoder,
         selectVoto, submitVotos, verResultadosVotos, enviarMencion,
         changeRankingTab,

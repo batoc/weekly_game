@@ -16,6 +16,7 @@ const Store = (() => {
     const DEFAULT_DATA = {
         config: {
             semana_actual: 1,
+            leader_id: 'ana',
             anio: 2026,
             nombre_equipo: "Dream Team",
             premios: [
@@ -60,9 +61,9 @@ const Store = (() => {
             { id: "ana", nombre: "Ana María Rubiano", avatar: "🦸‍♀️", color: "#ff6b35", pts: 0, nivel: 1, xp: 0, badges: [], stats: { proyectos_completados: 0, casos_resueltos: 0, semanas_100: 0, racha_actual: 0, poderes_usados: 0, votos_recibidos: 0 }},
             { id: "magda", nombre: "Magda Medina", avatar: "🧙‍♂️", color: "#7b2ff7", pts: 0, nivel: 1, xp: 0, badges: [], stats: { proyectos_completados: 0, casos_resueltos: 0, semanas_100: 0, racha_actual: 0, poderes_usados: 0, votos_recibidos: 0 }},
             { id: "monica", nombre: "Monica Muñoz", avatar: "🦹‍♀️", color: "#00d4aa", pts: 0, nivel: 1, xp: 0, badges: [], stats: { proyectos_completados: 0, casos_resueltos: 0, semanas_100: 0, racha_actual: 0, poderes_usados: 0, votos_recibidos: 0 }},
-            { id: "jugador4", nombre: "Jugador 4", avatar: "🧝‍♂️", color: "#ffd700", pts: 0, nivel: 1, xp: 0, badges: [], stats: { proyectos_completados: 0, casos_resueltos: 0, semanas_100: 0, racha_actual: 0, poderes_usados: 0, votos_recibidos: 0 }},
-            { id: "jugador5", nombre: "Jugador 5", avatar: "🤖", color: "#ff4757", pts: 0, nivel: 1, xp: 0, badges: [], stats: { proyectos_completados: 0, casos_resueltos: 0, semanas_100: 0, racha_actual: 0, poderes_usados: 0, votos_recibidos: 0 }},
-            { id: "jugador6", nombre: "Jugador 6", avatar: "🦊", color: "#1e90ff", pts: 0, nivel: 1, xp: 0, badges: [], stats: { proyectos_completados: 0, casos_resueltos: 0, semanas_100: 0, racha_actual: 0, poderes_usados: 0, votos_recibidos: 0 }}
+            { id: "karen", nombre: "Karen", avatar: "🧝‍♀️", color: "#ffd700", pts: 0, nivel: 1, xp: 0, badges: [], stats: { proyectos_completados: 0, casos_resueltos: 0, semanas_100: 0, racha_actual: 0, poderes_usados: 0, votos_recibidos: 0 }},
+            { id: "andres", nombre: "Andrés", avatar: "🤖", color: "#ff4757", pts: 0, nivel: 1, xp: 0, badges: [], stats: { proyectos_completados: 0, casos_resueltos: 0, semanas_100: 0, racha_actual: 0, poderes_usados: 0, votos_recibidos: 0 }},
+            { id: "cristian", nombre: "Cristian", avatar: "🦊", color: "#1e90ff", pts: 0, nivel: 1, xp: 0, badges: [], stats: { proyectos_completados: 0, casos_resueltos: 0, semanas_100: 0, racha_actual: 0, poderes_usados: 0, votos_recibidos: 0 }}
         ],
         semanas: [],
         proyectos: [],
